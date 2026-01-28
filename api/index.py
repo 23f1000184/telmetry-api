@@ -33,14 +33,15 @@ class RequestBody(BaseModel):
     threshold_ms: int
 
 
-@app.post("/api")
-def analyze(body: RequestBody):
+@app.api_route("/api", methods=["POST", "OPTIONS"])
+def analyze(body: RequestBody = None):
+    if body is None:
+        return {}
 
     with open(DATA_FILE) as f:
         telemetry = json.load(f)
 
     output = {}
-
     for region in body.regions:
         rows = [r for r in telemetry if r["region"] == region]
 
@@ -54,4 +55,4 @@ def analyze(body: RequestBody):
             "breaches": int(sum(x > body.threshold_ms for x in latencies)),
         }
 
-    return JSONResponse(output)
+    return output
