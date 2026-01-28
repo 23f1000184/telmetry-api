@@ -7,11 +7,12 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Enable CORS
+# ✅ Perfect CORS (Fixes Access-Control-Allow-Origin issue)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],   # includes OPTIONS + POST
     allow_headers=["*"],
 )
 
@@ -24,10 +25,16 @@ class RequestBody(BaseModel):
     threshold_ms: int
 
 
+# ✅ Handle browser preflight request
+@app.options("/api")
+def options_api():
+    return {}
+
+
 @app.post("/api")
 def analyze(body: RequestBody):
 
-    # ✅ Load file here (inside request)
+    # Load telemetry file
     with open(DATA_FILE) as f:
         telemetry = json.load(f)
 
