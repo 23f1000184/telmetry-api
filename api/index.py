@@ -37,7 +37,7 @@ def analyze(body: RequestBody):
         rows = [r for r in telemetry if r["region"] == region]
 
         latencies = [r["latency_ms"] for r in rows]
-        uptimes = [r["uptime"] for r in rows]
+        uptimes = [r["uptime_pct"] for r in rows]
 
         avg_latency = float(np.mean(latencies))
         p95_latency = float(np.percentile(latencies, 95))
