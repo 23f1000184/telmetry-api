@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Request
+import os, json, numpy as np
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import os, json, numpy as np
 
 app = FastAPI()
 
@@ -20,11 +20,10 @@ class RequestBody(BaseModel):
     regions: list[str]
     threshold_ms: int
 
-# ✅ Accept both POST and OPTIONS
-@app.api_route("/api", methods=["POST", "OPTIONS"])
+# ✅ ROOT endpoint (Vercel maps /api automatically)
+@app.api_route("/", methods=["POST", "OPTIONS"])
 def analyze(body: RequestBody = None):
 
-    # Preflight request
     if body is None:
         return {}
 
