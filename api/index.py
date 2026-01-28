@@ -1,22 +1,28 @@
-# redeploy trigger
-
 import os
 import json
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-# ✅ Perfect CORS (Fixes Access-Control-Allow-Origin issue)
+# Enable CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],   # includes OPTIONS + POST
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ Force CORS header always
+@app.middleware("http")
+async def add_cors_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_FILE = os.path.join(BASE_DIR, "q-vercel-latency.json")
@@ -27,16 +33,9 @@ class RequestBody(BaseModel):
     threshold_ms: int
 
 
-# ✅ Handle browser preflight request
-@app.options("/api")
-def options_api():
-    return {}
-
-
 @app.post("/api")
 def analyze(body: RequestBody):
 
-    # Load telemetry file
     with open(DATA_FILE) as f:
         telemetry = json.load(f)
 
@@ -48,16 +47,11 @@ def analyze(body: RequestBody):
         latencies = [r["latency_ms"] for r in rows]
         uptimes = [r["uptime_pct"] for r in rows]
 
-        avg_latency = float(np.mean(latencies))
-        p95_latency = float(np.percentile(latencies, 95))
-        avg_uptime = float(np.mean(uptimes))
-        breaches = int(sum(x > body.threshold_ms for x in latencies))
-
         output[region] = {
-            "avg_latency": avg_latency,
-            "p95_latency": p95_latency,
-            "avg_uptime": avg_uptime,
-            "breaches": breaches,
+            "avg_latency": float(np.mean(latencies)),
+            "p95_latency": float(np.percentile(latencies, 95)),
+            "avg_uptime": float(np.mean(uptimes)),
+            "breaches": int(sum(x > body.threshold_ms for x in latencies)),
         }
 
-    return output
+    return JSONResponse(output)
